@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% block title %}{{ m.name|title_name }}{% endblock %}
+{% macro val(v) %}{% if v %}{{ v }}{% else %}<span class="empty">Not provided</span>{% endif %}{% endmacro %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="crumb"><a href="{{ url_for('members') }}">Members</a> / #{{ m.member_id }}</div>
+    <h1>Member Profile</h1>
+  </div>
+  <div class="d-flex gap-2 flex-wrap no-print">
+    <button class="btn btn-outline-navy" onclick="window.print()"><i class="bi bi-printer me-1"></i>Print</button>
+    <a class="btn btn-navy" href="{{ url_for('member_edit', member_id=m.member_id) }}"><i class="bi bi-pencil me-1"></i>Edit</a>
+  </div>
+</div>
+
+<div class="profile-hero mb-3">
+  <div class="d-flex flex-wrap align-items-center gap-3 position-relative" style="z-index:1">
+    <span class="avatar lg">{{ m.name|initials }}</span>
+    <div class="flex-grow-1">
+      <h1>{{ m.name|title_name }}</h1>
+      <div class="meta mt-1">
+        <span class="me-3"><i class="bi bi-hash"></i>{{ m.member_id }}</span>
+        <span class="me-3"><i class="bi bi-mortarboard me-1"></i>{{ m.member_status or 'Member' }}</span>
+        <span class="me-3"><i class="bi bi-geo-alt me-1"></i>{{ m.place|title or '—' }}</span>
+        <span><i class="bi bi-diagram-3 me-1"></i>{{ m.chapter|title or '—' }} Chapter</span>
+      </div>
+      <div class="mt-2 d-flex gap-2 flex-wrap">
+        <span class="pill {{ 'pill-paid' if m.payment_status == 'Paid' else 'pill-unpaid' }}"><i class="bi {{ 'bi-check-circle-fill' if m.payment_status == 'Paid' else 'bi-exclamation-circle-fill' }}"></i>{{ m.payment_status }}</span>
+        {% if m.category %}<span class="pill pill-gold"><i class="bi bi-award"></i>{{ m.category }}</span>{% endif %}
+        {% if m.practicing %}<span class="pill pill-neutral" style="background:#fff">Practicing: {{ m.practicing }}</span>{% endif %}
+        {% if m.position %}<span class="pill pill-neutral" style="background:#fff"><i class="bi bi-briefcase"></i>{{ m.position }}</span>{% endif %}
+        {% if m.aadhaar_file %}<span class="pill pill-gold"><i class="bi bi-shield-check"></i>Aadhaar on file</span>{% endif %}
+        {% if m.record_status == 'Archived' %}<span class="pill pill-warn"><i class="bi bi-archive"></i>Archived</span>{% endif %}
+      </div>
+    </div>
+    <div class="d-flex gap-2 flex-wrap no-print">
+      {% if m.mobile %}<a class="btn btn-light" href="tel:{{ m.mobile }}"><i class="bi bi-telephone me-1"></i>Call</a>{% endif %}
+      <a class="btn btn-wa {% if not wa_ready %}disabled{% endif %}" href="{{ url_for('compose', ids=m.member_id, template='custom') }}"><i class="bi bi-whatsapp me-1"></i>WhatsApp</a>
+      <a class="btn btn-gold {% if not m.email %}disabled{% endif %}" href="{{ url_for('compose', ids=m.member_id, template='custom') }}"><i class="bi bi-envelope me-1"></i>Email</a>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-xl-8">
+    <div class="card-x mb-3">
+      <div class="card-h"><h2>Contact &amp; Personal</h2>
+        <span class="text-muted-2" style="font-size:13px">Profile {{ score }}% complete</span></div>
+      <div class="card-b">
+        <div class="meter gold mb-3"><span style="width:{{ score }}%"></span></div>
+        <div class="row">
+          <div class="col-md-6"><dl class="kv">
+            <dt>Mobile</dt><dd class="mono">{{ val(m.mobile) }}</dd>
+            <dt>Alternate mobile</dt><dd class="mono">{{ val(m.alt_mobile) }}</dd>
+            <dt>Email</dt><dd>{% if m.email %}<a href="mailto:{{ m.email }}">{{ m.email }}</a>{% else %}{{ val('') }}{% endif %}</dd>
+            <dt>Address</dt><dd>{{ val(m.address) }}{% if m.pincode %} – {{ m.pincode }}{% endif %}</dd>
+            <dt>State</dt><dd>{{ val(m.state|title) }}</dd>
+          </dl></div>
+          <div class="col-md-6"><dl class="kv">
+            <dt>Gender</dt><dd>{{ val(m.gender) }}</dd>
+            <dt>Date of birth</dt><dd>{{ val(m.dob) }}</dd>
+            <dt>Marital status</dt><dd>{{ val(m.marital_status) }}</dd>
+            <dt>Member status</dt><dd>{{ val(m.member_status) }}</dd>
+            <dt>Category</dt><dd>{{ val(m.category) }}</dd>
+            <dt>Practicing</dt><dd>{{ val(m.practicing) }}</dd>
+            <dt>Position</dt><dd>{{ val(m.position) }}{% if m.ob_ecm %} ({{ m.ob_ecm }}){% endif %}</dd>
+          </dl></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-x mb-3">
+      <div class="card-h"><h2>Education &amp; Experience</h2></div>
+      <div class="card-b"><div class="row">
+        <div class="col-md-6"><dl class="kv">
+          <dt>Education</dt><dd>{{ val(m.education) }}</dd>
+          <dt>Specialization</dt><dd>{{ val(m.specialization) }}</dd>
+        </dl></div>
+        <div class="col-md-6"><dl class="kv">
+          <dt>GSTP No</dt><dd class="mono">{{ val(m.gstp_no) }}</dd>
+          <dt>ITP No</dt><dd class="mono">{{ val(m.itp_no) }}</dd>
+          <dt>Advocate/Others</dt><dd>{{ val(m.advocate_others) }}</dd>
+          <dt>Organization</dt><dd>{{ val(m.organization) }}</dd>
+        </dl></div>
+      </div></div>
+    </div>
+
+    <div class="card-x mb-3">
+      <div class="card-h"><h2>Communication History</h2>
+        <a class="btn btn-sm btn-outline-navy no-print" href="{{ url_for('compose', ids=m.member_id) }}"><i class="bi bi-plus-lg me-1"></i>New message</a></div>
+      <div class="card-b py-2">
+        {% if history %}
+        <ul class="timeline">
+          {% for c in history %}
+          <li>
+            <span class="dot"><i class="bi {{ 'bi-whatsapp' if c.channel == 'WhatsApp' else 'bi-envelope' }}"></i></span>
+            <div class="flex-grow-1">
+              <div class="d-flex justify-content-between gap-2 flex-wrap">
+                <span class="fw-semibold">{{ c.subject or c.channel + ' message' }}</span>
+                <span class="pill {{ {'Sent':'pill-paid','Failed':'pill-unpaid','Rejected':'pill-unpaid','Manual':'pill-warn'}.get(c.status, 'pill-neutral') }}">{{ c.status }}</span>
+              </div>
+              <div class="text-muted-2" style="font-size:12.5px">{{ c.body|truncate(140) }}</div>
+              <div class="text-muted-2" style="font-size:12px">{{ c.created_on }} · {{ c.recipient }}{% if c.error %} · {{ c.error }}{% endif %}</div>
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}<p class="text-muted-2 my-3 text-center">No messages yet.</p>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-4">
+    <div class="card-x mb-3">
+      <div class="card-h"><h2>Subscription</h2></div>
+      <div class="card-b">
+        <div class="d-flex align-items-baseline justify-content-between mb-2">
+          <span class="serif" style="font-size:26px;font-weight:700">{{ m.subscription|inr }}</span>
+          <span class="pill {{ 'pill-paid' if m.payment_status == 'Paid' else 'pill-unpaid' }}">{{ m.payment_status }}</span>
+        </div>
+        <dl class="kv" style="grid-template-columns:120px 1fr">
+          <dt>Subscription date</dt><dd>{{ val(m.payment_date) }}</dd>
+          <dt>Mode</dt><dd>{{ val(m.payment_mode) }}</dd>
+          <dt>Receipt no.</dt><dd>{{ val(m.receipt_no) }}</dd>
+        </dl>
+        {% if m.payment_status != 'Paid' %}
+        <a class="btn btn-sm btn-outline-navy w-100 mt-3 no-print" href="{{ url_for('compose', ids=m.member_id, template='payment_reminder') }}"><i class="bi bi-bell me-1"></i>Send payment reminder</a>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card-x mb-3">
+      <div class="card-h"><h2><i class="bi bi-shield-lock me-1" style="color:var(--gold-600)"></i>Aadhaar Document</h2></div>
+      <div class="card-b">
+        {% if m.aadhaar_file %}
+          <div class="d-flex align-items-center gap-3 mb-3">
+            <i class="bi {{ 'bi-file-earmark-pdf' if m.aadhaar_file.endswith('pdf') else 'bi-file-earmark-image' }}" style="font-size:34px;color:var(--navy-700)"></i>
+            <div><div class="fw-semibold">Aadhaar on file</div>
+              <div class="text-muted-2" style="font-size:12px">Uploaded {{ m.aadhaar_uploaded_on }}</div></div>
+          </div>
+          <div class="d-flex gap-2 no-print">
+            <a class="btn btn-sm btn-navy" target="_blank" href="{{ url_for('aadhaar_view', member_id=m.member_id) }}"><i class="bi bi-eye me-1"></i>View</a>
+            <form method="post" action="{{ url_for('aadhaar_delete', member_id=m.member_id) }}" data-confirm="Remove this Aadhaar document?">
+              <input type="hidden" name="csrf" value="{{ csrf_token }}">
+              <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash me-1"></i>Remove</button>
+            </form>
+          </div>
+          <hr>
+        {% endif %}
+        <form method="post" enctype="multipart/form-data" action="{{ url_for('aadhaar_upload', member_id=m.member_id) }}" class="no-print">
+          <input type="hidden" name="csrf" value="{{ csrf_token }}">
+          <label class="upload-zone d-block" for="aadhaarFile">
+            <i class="bi bi-cloud-arrow-up d-block mb-1" style="font-size:26px;color:var(--navy-600)"></i>
+            <span class="fw-semibold" id="aadhaarName">{{ 'Replace document' if m.aadhaar_file else 'Choose Aadhaar file' }}</span>
+            <div class="text-muted-2" style="font-size:12px">PDF, JPG or PNG · max 5 MB</div>
+          </label>
+          <input type="file" id="aadhaarFile" name="aadhaar" accept=".pdf,.jpg,.jpeg,.png" class="d-none" required
+                 onchange="aadhaarName.textContent=this.files[0]?.name||'Choose Aadhaar file'">
+          <button class="btn btn-gold btn-sm w-100 mt-2"><i class="bi bi-upload me-1"></i>Upload</button>
+        </form>
+        <p class="text-muted-2 mt-2 mb-0" style="font-size:12px"><i class="bi bi-lock me-1"></i>Stored locally, visible only to signed-in staff; every view is logged.</p>
+      </div>
+    </div>
+
+    <div class="card-x mb-3">
+      <div class="card-h"><h2>Notes</h2></div>
+      <div class="card-b">{% if m.comments %}<p class="mb-0" style="white-space:pre-wrap">{{ m.comments }}</p>{% else %}<p class="empty mb-0">No notes.</p>{% endif %}</div>
+    </div>
+
+    <div class="card-x no-print">
+      <div class="card-b d-flex justify-content-between align-items-center">
+        <div class="text-muted-2" style="font-size:12px">Created {{ m.created_on }}<br>Updated {{ m.updated_on }}</div>
+        <form method="post" action="{{ url_for('member_archive', member_id=m.member_id) }}"
+              data-confirm="{{ 'Restore this member?' if m.record_status == 'Archived' else 'Archive this member? They will be hidden from lists and dashboard (not deleted).' }}">
+          <input type="hidden" name="csrf" value="{{ csrf_token }}">
+          <button class="btn btn-sm {{ 'btn-outline-navy' if m.record_status == 'Archived' else 'btn-outline-danger' }}">
+            <i class="bi {{ 'bi-arrow-counterclockwise' if m.record_status == 'Archived' else 'bi-archive' }} me-1"></i>{{ 'Restore' if m.record_status == 'Archived' else 'Archive' }}</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

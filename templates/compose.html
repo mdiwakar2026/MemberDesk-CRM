@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Compose Message{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="crumb">Communication</div>
+    <h1>Compose Message</h1>
+  </div>
+</div>
+
+{% if not recipients %}
+  <div class="card-x"><div class="card-b text-center py-5">
+    <i class="bi bi-people d-block mb-2" style="font-size:32px;color:var(--navy-600)"></i>
+    <p class="mb-3">No recipients selected.</p>
+    <a class="btn btn-navy" href="{{ url_for('members', compose=1) }}">Choose members</a>
+  </div></div>
+{% else %}
+<div class="alert alert-warning d-flex gap-2"><i class="bi bi-shield-check"></i>
+  <div><b>Approval required.</b> Messages are placed in the <a href="{{ url_for('outbox') }}">Outbox</a> for review — nothing is sent until an administrator approves it.</div></div>
+
+<form method="post">
+  <input type="hidden" name="csrf" value="{{ csrf_token }}">
+  <input type="hidden" name="action" value="queue">
+  <input type="hidden" name="id_list" value="{{ recipients|map(attribute='member_id')|join(',') }}">
+  <div class="row g-3">
+    <div class="col-xl-8">
+      <div class="card-x mb-3"><div class="card-b">
+        <h3 class="form-section"><i class="bi bi-ui-checks"></i>Channel &amp; Template</h3>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Send via</label>
+            <div class="d-flex gap-3">
+              <label class="form-check"><input class="form-check-input" type="checkbox" name="channels" value="WhatsApp" checked>
+                <span class="form-check-label"><i class="bi bi-whatsapp text-success me-1"></i>WhatsApp</span></label>
+              <label class="form-check"><input class="form-check-input" type="checkbox" name="channels" value="Email" checked>
+                <span class="form-check-label"><i class="bi bi-envelope me-1" style="color:var(--navy-600)"></i>Email</span></label>
+            </div>
+            <div class="text-muted-2 mt-1" style="font-size:12px">
+              WhatsApp: {{ 'Cloud API connected' if whatsapp_ready else 'click-to-chat links (API not configured)' }} ·
+              Email: {{ 'SMTP connected' if email_ready else 'mail links (SMTP not configured)' }}</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="tpl">Template</label>
+            <select class="form-select" id="tpl">
+              {% for k, t in templates.items() %}<option value="{{ k }}" {% if k == tpl_key %}selected{% endif %}>{{ t.label }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="col-12">
+            <label class="form-label" for="subject">Subject <span class="text-muted-2 fw-normal">(email)</span></label>
+            <input class="form-control" id="subject" name="subject" value="{{ tpl.subject }}">
+          </div>
+          <div class="col-12">
+            <label class="form-label" for="body">Message</label>
+            <textarea class="form-control" id="body" name="body" rows="9" required>{{ tpl.body }}</textarea>
+            <div class="text-muted-2 mt-1" style="font-size:12px">Placeholders:
+              {% for p in ['name','member_id','fee','subscription','place','chapter','position'] %}<code class="me-1" role="button" onclick="ins('{{ p }}')">{{ '{' ~ p ~ '}' }}</code>{% endfor %}</div>
+          </div>
+        </div>
+      </div></div>
+    </div>
+    <div class="col-xl-4">
+      <div class="card-x mb-3"><div class="card-b">
+        <h3 class="form-section"><i class="bi bi-eye"></i>Preview <span class="text-muted-2 fw-normal" style="font-family:Inter;font-size:12px">for {{ recipients[0].name|title_name }}</span></h3>
+        <div class="msg-preview" id="preview">{{ preview }}</div>
+      </div></div>
+      <div class="card-x mb-3">
+        <div class="card-h"><h2>Recipients ({{ recipients|length }})</h2></div>
+        <div class="card-b py-2" style="max-height:280px;overflow:auto">
+          {% for r in recipients %}
+          <div class="d-flex justify-content-between py-1 border-bottom" style="font-size:13px">
+            <span>{{ r.name|title_name }}</span>
+            <span class="text-muted-2">
+              <i class="bi bi-whatsapp {{ 'text-success' if r.mobile else 'opacity-25' }}" title="{{ r.mobile or 'No mobile' }}"></i>
+              <i class="bi bi-envelope ms-1 {{ '' if r.email else 'opacity-25' }}" title="{{ r.email or 'No email' }}"></i></span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      <button class="btn btn-gold w-100 py-2"><i class="bi bi-inbox me-1"></i>Queue for approval</button>
+    </div>
+  </div>
+</form>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+<script>
+const TPL = {{ templates|tojson }};
+const SAMPLE = {{ (recipients[0] if recipients else {})|tojson }};
+SAMPLE.fee = {{ cfg.SUBSCRIPTION_FEE }};
+const title = (s) => (s || "").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+const bodyEl = document.getElementById("body"), subj = document.getElementById("subject");
+function renderPreview() {
+  if (!bodyEl) return;
+  preview.textContent = bodyEl.value.replace(/\{(\w+)\}/g, (m, k) => k === "name" ? title(SAMPLE.name) || "Member" : (SAMPLE[k] ?? m));
+}
+function ins(p) { const s = bodyEl.selectionStart; bodyEl.setRangeText(`{${p}}`, s, bodyEl.selectionEnd, "end"); bodyEl.focus(); renderPreview(); }
+document.getElementById("tpl")?.addEventListener("change", (e) => {
+  const t = TPL[e.target.value]; subj.value = t.subject; bodyEl.value = t.body; renderPreview();
+});
+bodyEl?.addEventListener("input", renderPreview);
+renderPreview();
+</script>
+{% endblock %}

@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Add Member' if creating else 'Edit ' + m.name|title_name }}{% endblock %}
+
+{% macro field(name, label, type='text', required=false, col='col-md-6', placeholder='', list=None, attrs='') %}
+<div class="{{ col }}">
+  <label class="form-label {% if required %}req{% endif %}" for="f_{{ name }}">{{ label }}</label>
+  <input class="form-control {% if errors[name] %}is-invalid{% endif %}" id="f_{{ name }}" name="{{ name }}" type="{{ type }}"
+         value="{{ m[name] }}" placeholder="{{ placeholder }}" {% if required %}required{% endif %} {% if list %}list="dl_{{ name }}"{% endif %} {{ attrs|safe }}>
+  {% if list %}<datalist id="dl_{{ name }}">{% for o in list %}<option value="{{ o }}">{% endfor %}</datalist>{% endif %}
+  {% if errors[name] %}<div class="invalid-feedback">{{ errors[name] }}</div>{% endif %}
+</div>
+{% endmacro %}
+
+{% macro select(name, label, options, col='col-md-6') %}
+<div class="{{ col }}">
+  <label class="form-label" for="f_{{ name }}">{{ label }}</label>
+  <select class="form-select" id="f_{{ name }}" name="{{ name }}">
+    <option value="">— Select —</option>
+    {% for o in options %}<option {% if m[name] == o %}selected{% endif %}>{{ o }}</option>{% endfor %}
+    {% if m[name] and m[name] not in options %}<option selected>{{ m[name] }}</option>{% endif %}
+  </select>
+</div>
+{% endmacro %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="crumb"><a href="{{ url_for('members') }}">Members</a> / {{ 'New' if creating else '#' + m.member_id }}</div>
+    <h1>{{ 'Add New Member' if creating else 'Edit Member' }}</h1>
+  </div>
+</div>
+
+<form method="post" novalidate>
+  <input type="hidden" name="csrf" value="{{ csrf_token }}">
+  {% if not creating %}<input type="hidden" name="_orig_id" value="{{ m.member_id }}">{% endif %}
+  <div class="row g-3">
+    <div class="col-xl-8">
+      <div class="card-x mb-3"><div class="card-b">
+        <h3 class="form-section"><i class="bi bi-person-badge"></i>Basic Details</h3>
+        <div class="row g-3">
+          {% if creating %}
+            {{ field('member_id', 'Member ID', required=true, col='col-md-4', attrs='inputmode="numeric"') }}
+          {% else %}
+            <div class="col-md-4"><label class="form-label">Member ID</label>
+              <input class="form-control" value="{{ m.member_id }}" disabled><input type="hidden" name="member_id" value="{{ m.member_id }}"></div>
+          {% endif %}
+          {{ field('name', 'Full Name', required=true, col='col-md-8', placeholder='As per records') }}
+          {{ select('gender', 'Gender', choices.gender, 'col-md-4') }}
+          {{ field('dob', 'Date of Birth', type='date', col='col-md-4') }}
+          {{ select('marital_status', 'Marital Status', choices.marital_status, 'col-md-4') }}
+        </div>
+      </div></div>
+
+      <div class="card-x mb-3"><div class="card-b">
+        <h3 class="form-section"><i class="bi bi-telephone"></i>Contact</h3>
+        <div class="row g-3">
+          {{ field('mobile', 'Mobile Number', type='tel', col='col-md-4', placeholder='10-digit mobile', attrs='inputmode="numeric" maxlength="14"') }}
+          {{ field('alt_mobile', 'Alternate Mobile', type='tel', col='col-md-4', attrs='inputmode="numeric" maxlength="14"') }}
+          {{ field('email', 'Email', type='email', col='col-md-4') }}
+          {{ field('address', 'Address', col='col-md-8') }}
+          {{ field('pincode', 'Pincode', col='col-md-4', attrs='inputmode="numeric" maxlength="6"') }}
+          {{ field('place', 'Place / District', col='col-md-4', list=suggestions.place) }}
+          {{ field('state', 'State', col='col-md-4', list=suggestions.state) }}
+          {{ field('chapter', 'Chapter / Study Circle', col='col-md-4', list=suggestions.chapter) }}
+        </div>
+      </div></div>
+
+      <div class="card-x mb-3"><div class="card-b">
+        <h3 class="form-section"><i class="bi bi-mortarboard"></i>Education &amp; Experience</h3>
+        <div class="row g-3">
+          {{ select('education', 'Highest Education', choices.education, 'col-md-6') }}
+          {{ field('specialization', 'Specialization', col='col-md-6', placeholder='e.g. GST, Income Tax', list=suggestions.specialization) }}
+          {{ field('gstp_no', 'GSTP No', col='col-md-4', placeholder='GST Practitioner enrolment no.') }}
+          {{ field('itp_no', 'ITP No', col='col-md-4', placeholder='Income Tax Practitioner no.') }}
+          {{ field('advocate_others', 'Advocate/Others', col='col-md-4', placeholder='Advocate, or specify other', list=suggestions.advocate_others|unique|list) }}
+          {{ field('organization', 'Organization / Firm', col='col-md-8') }}
+        </div>
+      </div></div>
+    </div>
+
+    <div class="col-xl-4">
+      <div class="card-x mb-3"><div class="card-b">
+        <h3 class="form-section"><i class="bi bi-award"></i>Membership</h3>
+        <div class="row g-3">
+          {{ field('member_status', 'Status', col='col-6', placeholder='e.g. Qualified', list=suggestions.member_status) }}
+          {{ field('category', 'Category', col='col-6', placeholder='e.g. Fellow', list=suggestions.category) }}
+          {{ field('practicing', 'Practicing', col='col-6', list=suggestions.practicing) }}
+          {{ field('position', 'Position (office bearer)', col='col-6', list=suggestions.position) }}
+          {{ field('ob_ecm', 'OB / ECM', col='col-6', list=['OB', 'ECM']) }}
+          {{ select('record_status', 'Record Status', choices.record_status, 'col-6') }}
+        </div>
+      </div></div>
+
+      <div class="card-x mb-3"><div class="card-b">
+        <h3 class="form-section"><i class="bi bi-cash-coin"></i>Subscription</h3>
+        <div class="row g-3">
+          {{ field('subscription', 'Amount Paid (₹)', col='col-6', placeholder=cfg.SUBSCRIPTION_FEE|string, attrs='inputmode="numeric"') }}
+          {{ field('payment_date', 'Subscription Date', type='date', col='col-6') }}
+          {{ select('payment_mode', 'Payment Mode', choices.payment_mode, 'col-6') }}
+          {{ field('receipt_no', 'Receipt No.', col='col-6') }}
+          <div class="col-12 text-muted-2" style="font-size:12px"><i class="bi bi-info-circle me-1"></i>Status becomes <b>Paid</b> when the amount is more than ₹0.</div>
+        </div>
+      </div></div>
+
+      <div class="card-x mb-3"><div class="card-b">
+        <h3 class="form-section"><i class="bi bi-journal-text"></i>Notes</h3>
+        <textarea class="form-control" name="comments" rows="4" placeholder="Internal remarks">{{ m.comments }}</textarea>
+        {% if creating %}<p class="text-muted-2 mt-2 mb-0" style="font-size:12px">You can upload the Aadhaar document from the profile page after saving.</p>{% endif %}
+      </div></div>
+
+      <div class="d-flex gap-2">
+        <button class="btn btn-gold flex-grow-1"><i class="bi bi-check2-circle me-1"></i>{{ 'Create Member' if creating else 'Save Changes' }}</button>
+        <a class="btn btn-outline-navy" href="{{ url_for('member_detail', member_id=m.member_id) if not creating else url_for('members') }}">Cancel</a>
+      </div>
+    </div>
+  </div>
+</form>
+{% endblock %}

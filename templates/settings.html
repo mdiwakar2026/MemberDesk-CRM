@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Settings &amp; Logs{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><div class="crumb">Administration</div><h1>Settings &amp; Logs</h1></div>
+  <a class="btn btn-outline-navy" href="{{ url_for('download_db') }}"><i class="bi bi-download me-1"></i>Download database</a>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-lg-6">
+    <div class="card-x h-100">
+      <div class="card-h"><h2>Integrations</h2></div>
+      <div class="card-b">
+        {% for label, ok, hint in [
+          ('Email (SMTP)', email_ready, 'Set SMTP_HOST, SMTP_USER, SMTP_PASSWORD, SMTP_FROM in .env'),
+          ('WhatsApp Cloud API', whatsapp_ready, 'Set WHATSAPP_TOKEN and WHATSAPP_PHONE_NUMBER_ID in .env'),
+        ] %}
+        <div class="d-flex justify-content-between align-items-start py-2 border-bottom">
+          <div><div class="fw-semibold">{{ label }}</div><div class="text-muted-2" style="font-size:12px">{{ hint }}</div></div>
+          <span class="pill {{ 'pill-paid' if ok else 'pill-warn' }}"><i class="bi {{ 'bi-check-circle-fill' if ok else 'bi-dash-circle' }}"></i>{{ 'Connected' if ok else 'Not configured' }}</span>
+        </div>
+        {% endfor %}
+        <p class="text-muted-2 mt-3 mb-0" style="font-size:12.5px"><i class="bi bi-key me-1"></i>Credentials are read from the local <code>.env</code> file at start-up and are never stored in the database or shown here. Restart the app after editing <code>.env</code>.</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card-x h-100">
+      <div class="card-h"><h2>Data &amp; Safety</h2></div>
+      <div class="card-b">
+        <dl class="kv" style="grid-template-columns:170px 1fr">
+          <dt>Database</dt><dd class="mono" style="font-size:12px">SQLite · data/{{ cfg.DB_PATH.name }}</dd>
+          <dt>Records</dt><dd>{{ counts.members }} members · {{ counts.messages }} messages</dd>
+          <dt>Subscription fee</dt><dd>{{ cfg.SUBSCRIPTION_FEE|inr }}</dd>
+          <dt>Send limits</dt><dd>{{ cfg.MAX_SEND_PER_BATCH }} / batch · {{ cfg.MAX_SEND_PER_DAY }} / day</dd>
+          <dt>Backups kept</dt><dd>Last {{ cfg.BACKUP_KEEP }} versions</dd>
+          <dt>Latest backups</dt><dd style="font-size:12px">{% for b in backups %}<div class="mono">{{ b.name }}</div>{% else %}<span class="empty">None yet</span>{% endfor %}</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card-x">
+  <div class="card-h"><h2>Audit Log</h2><span class="text-muted-2" style="font-size:12px">Latest 60 entries</span></div>
+  <div class="table-responsive">
+    <table class="table-x">
+      <thead><tr><th>Time</th><th>User</th><th>Action</th><th>Detail</th></tr></thead>
+      <tbody>
+      {% for a in audit %}
+        <tr><td class="mono text-nowrap" style="font-size:12px">{{ a.ts }}</td><td>{{ a.user }}</td>
+          <td><span class="pill pill-neutral">{{ a.action }}</span></td><td style="font-size:13px">{{ a.detail }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

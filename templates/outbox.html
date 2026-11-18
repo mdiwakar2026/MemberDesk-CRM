@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Outbox{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="crumb">Communication</div>
+    <h1>Outbox &amp; Approvals</h1>
+  </div>
+  <a class="btn btn-gold" href="{{ url_for('members', compose=1) }}"><i class="bi bi-pencil-square me-1"></i>New message</a>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-md-4"><div class="card-x stat">
+    <div class="ico"><i class="bi bi-whatsapp"></i></div><div class="label">WhatsApp</div>
+    <div class="value" style="font-size:18px">{{ 'Cloud API' if whatsapp_ready else 'Click-to-chat' }}</div>
+    <div class="hint">{{ 'Messages send automatically on approval' if whatsapp_ready else 'Approve → open link → mark as sent' }}</div></div></div>
+  <div class="col-md-4"><div class="card-x stat">
+    <div class="ico"><i class="bi bi-envelope"></i></div><div class="label">Email</div>
+    <div class="value" style="font-size:18px">{{ 'SMTP connected' if email_ready else 'Mail link' }}</div>
+    <div class="hint">{{ 'Messages send automatically on approval' if email_ready else 'Configure SMTP in .env to automate' }}</div></div></div>
+  <div class="col-md-4"><div class="card-x stat">
+    <div class="ico"><i class="bi bi-speedometer2"></i></div><div class="label">Today's sending budget</div>
+    <div class="value" style="font-size:18px">{{ sent_today }} / {{ cfg.MAX_SEND_PER_DAY }}</div>
+    <div class="hint">Max {{ cfg.MAX_SEND_PER_BATCH }} per approval batch</div></div></div>
+</div>
+
+<ul class="nav nav-pills mb-3 gap-1">
+  {% for s in ['Pending Approval', 'Manual', 'Sent', 'Failed', 'Rejected', 'All'] %}
+  <li class="nav-item"><a class="nav-link {% if status == s %}active{% endif %}" href="{{ url_for('outbox', status=s) }}">{{ s }}
+    <span class="badge rounded-pill text-bg-light ms-1">{{ counts.values()|sum if s == 'All' else counts.get(s, 0) }}</span></a></li>
+  {% endfor %}
+</ul>
+
+<form method="post" action="{{ url_for('outbox_action') }}" id="obForm">
+  <input type="hidden" name="csrf" value="{{ csrf_token }}">
+  <input type="hidden" name="return_status" value="{{ status }}">
+  <div class="card-x">
+    {% if items and status in ('Pending Approval', 'Manual', 'Failed') %}
+    <div class="card-h flex-wrap">
+      <label class="form-check m-0" style="font-size:13px"><input class="form-check-input" type="checkbox" name="confirm" value="yes">
+        <span class="form-check-label">I have reviewed the selected messages and approve sending them.</span></label>
+      <div class="d-flex gap-2 flex-wrap">
+        {% if status != 'Manual' %}<button class="btn btn-sm btn-gold" name="action" value="approve"><i class="bi bi-check2-all me-1"></i>Approve &amp; send</button>{% endif %}
+        <button class="btn btn-sm btn-outline-navy" name="action" value="mark_sent"><i class="bi bi-check2 me-1"></i>Mark as sent</button>
+        <button class="btn btn-sm btn-outline-danger" name="action" value="reject" formnovalidate><i class="bi bi-x-lg me-1"></i>Reject</button>
+      </div>
+    </div>
+    {% endif %}
+    <div class="table-responsive">
+      <table class="table-x">
+        <thead><tr>
+          <th style="width:36px"><input class="form-check-input" type="checkbox" id="checkAll" aria-label="Select all"></th>
+          <th>Recipient</th><th>Channel</th><th>Message</th><th>Status</th><th>Created</th><th class="text-end">Send manually</th>
+        </tr></thead>
+        <tbody>
+        {% for c in items %}
+          <tr>
+            <td><input class="form-check-input row-check" type="checkbox" name="ids" value="{{ c.id }}"></td>
+            <td><a class="fw-semibold text-reset text-decoration-none" href="{{ url_for('member_detail', member_id=c.member_id) }}">{{ c.name|title_name }}</a>
+              <div class="text-muted-2 mono" style="font-size:12px">{{ c.recipient }}</div></td>
+            <td><span class="pill pill-neutral"><i class="bi {{ 'bi-whatsapp' if c.channel == 'WhatsApp' else 'bi-envelope' }}"></i>{{ c.channel }}</span></td>
+            <td style="max-width:380px">
+              {% if c.subject and c.channel == 'Email' %}<div class="fw-semibold" style="font-size:13px">{{ c.subject }}</div>{% endif %}
+              <div class="text-muted-2" style="font-size:12.5px" title="{{ c.body }}">{{ c.body|truncate(110) }}</div>
+              {% if c.error %}<div style="font-size:12px;color:var(--warn)"><i class="bi bi-info-circle me-1"></i>{{ c.error }}</div>{% endif %}
+            </td>
+            <td><span class="pill {{ {'Sent':'pill-paid','Failed':'pill-unpaid','Rejected':'pill-unpaid','Manual':'pill-warn'}.get(c.status, 'pill-neutral') }}">{{ c.status }}</span>
+              {% if c.approved_by %}<div class="text-muted-2" style="font-size:11px">by {{ c.approved_by }}</div>{% endif %}</td>
+            <td class="text-muted-2" style="font-size:12px">{{ c.created_on }}<br>by {{ c.created_by }}</td>
+            <td class="text-end">
+              {% if c.link and c.status not in ('Sent', 'Rejected') %}
+              <a class="btn btn-sm {{ 'btn-wa' if c.channel == 'WhatsApp' else 'btn-outline-navy' }}" href="{{ c.link }}" target="_blank" rel="noopener">
+                <i class="bi {{ 'bi-whatsapp' if c.channel == 'WhatsApp' else 'bi-envelope' }} me-1"></i>Open</a>
+              {% endif %}
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="7" class="text-center py-5 text-muted-2"><i class="bi bi-inbox d-block mb-2" style="font-size:28px"></i>No messages in “{{ status }}”.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</form>
+{% endblock %}
+{% block scripts %}
+<script>
+const checks = [...document.querySelectorAll(".row-check")];
+document.getElementById("checkAll")?.addEventListener("change", (e) => checks.forEach(c => c.checked = e.target.checked));
+</script>
+<style>.nav-pills .nav-link{color:var(--navy-800);border-radius:8px;font-weight:500}.nav-pills .nav-link.active{background:var(--navy-800)}</style>
+{% endblock %}

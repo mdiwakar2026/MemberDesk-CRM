@@ -1,0 +1,22 @@
+# secrets
+.env
+
+# runtime data (the database is rebuilt from db/schema.sql + db/seed.sql)
+data/
+uploads/
+*.db
+*.db-journal
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# os / editor
+.DS_Store
+.vscode/
+.idea/
+
+# local tooling
+.claude/
