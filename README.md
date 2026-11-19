@@ -10,7 +10,7 @@ Built with **Flask** and **SQLite**. It runs on your own computer, with no cloud
 
 ## Demo video
 
-▶️ **[Watch the 6-minute walkthrough on YouTube](https://youtu.be/fLtmtNUaeio)**: sign-in, the dashboard, member profiles, editing and adding members, and the dues-pending list.
+▶️ **[Watch the 6-minute walkthrough on YouTube](https://youtu.be/sW_6nSUBdRM)**: sign-in, the dashboard, member profiles, editing and adding members, and the dues-pending list.
 
 The video was recorded on the original in-house version of the app. This repository is the same app with its branding removed and SQLite in place of Excel.
 
